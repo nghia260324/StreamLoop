@@ -93,6 +93,8 @@ router.post("/stop", (req, res) => {
   }
 });
 
-
+router.get("/keep-alive", (req, res) => {
+    res.status(200).send('Server is up and running!');
+});
 
 module.exports = router;
