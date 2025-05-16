@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>🎬 Quản lý Video Stream</title>
+    <link rel="stylesheet" href="/stylesheets/style.css">
+</head>
+
+<body>
+
+    <h2>Tải video lên</h2>
+    <form id="upload-form" enctype="multipart/form-data">
+        <input type="file" name="video" multiple required />
+        <button type="submit">Tải lên</button>
+    </form>
+
+    <h2>Danh sách video</h2>
+    <ul id="video-list">
+    </ul>
+    <div>
+        <p id="stream-status">⏹️ Stream chưa bắt đầu</p>
+        <button id="start-btn">▶️ Bắt đầu Live</button>
+        <button id="stop-btn">⏹️ Dừng Live</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            document.getElementById("start-btn").addEventListener("click", async () => {
+                const res = await fetch("/start", { method: "POST" });
+                const msg = await res.text();
+                document.getElementById("stream-status").textContent = "🔴 Đang livestream";
+                alert(msg);
+            });
+
+            document.getElementById("stop-btn").addEventListener("click", async () => {
+                const res = await fetch("/stop", { method: "POST" });
+                const msg = await res.text();
+                document.getElementById("stream-status").textContent = "⏹️ Stream đã dừng";
+                alert(msg);
+            });
+
+            updateVideoList();
+        });
+
+        async function updateVideoList() {
+            const res = await fetch('/videos');
+            const videos = await res.json();
+            const listEl = document.getElementById('video-list');
+            listEl.innerHTML = '';
+
+            if (!videos.length) {
+                listEl.innerHTML = '<li>Không có video nào.</li>';
+                return;
+            }
+
+            videos.forEach(video => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+    ID: ${video.id}, Tên: ${video.name}
+    <button onclick="deleteVideo(${video.id})">Xoá</button>
+    <button onclick="selectVideo('${video.id}')">Chọn để Live</button>
+    ${video.selected ? '<span>✅ Đã chọn</span>' : ''}
+  `;
+                listEl.appendChild(li);
+            });
+        }
+
+        async function deleteVideo(filename) {
+            const res = await fetch('/delete/' + filename, { method: 'POST' });
+            if (res.ok) {
+                updateVideoList();
+            }
+        }
+
+        document.getElementById('upload-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const res = await fetch('/upload', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (res.ok) {
+                e.target.reset();
+                updateVideoList();
+            }
+        });
+        async function selectVideo(id) {
+            try {
+                const res = await fetch(`/select/${id}`, {
+                    method: "POST"
+                });
+
+                if (!res.ok) {
+                    const msg = await res.text();
+                    alert("❌ Lỗi: " + msg);
+                    return;
+                }
+
+                const msg = await res.text();
+                alert("✅ " + msg);
+
+                // Gọi lại hàm để cập nhật danh sách video trên giao diện
+                updateVideoList();
+            } catch (err) {
+                console.error("Lỗi khi chọn video:", err);
+                alert("❌ Không thể chọn video.");
+            }
+        }
+
+    </script>
+</body>
+</html>
